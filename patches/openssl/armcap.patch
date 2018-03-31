@@ -1,0 +1,37 @@
+From 932d9389b4a4f3cbba4a81dcc374611d119e0afc Mon Sep 17 00:00:00 2001
+From: George Hopkins <george-hopkins@null.net>
+Date: Sat, 31 Mar 2018 11:12:43 +0200
+Subject: [PATCH] Hardcode capabilities on ARM
+
+If the kernel does not support signal handlers for SIGILL, we need
+to hard code the capabilities. Unfortunately, there seems to be no
+easy way to detect these restrictions during runtime.
+
+Signed-off-by: George Hopkins <george-hopkins@null.net>
+---
+ crypto/armcap.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/crypto/armcap.c b/crypto/armcap.c
+index 432a06c..3fac794 100644
+--- a/crypto/armcap.c
++++ b/crypto/armcap.c
+@@ -111,6 +111,15 @@ void OPENSSL_cpuid_setup(void)
+         return;
+     }
+ 
++    /**
++     * Hardcode capabilities for kernels which do not allow setting
++     * handlers for SIGILL.
++     */
++    if (1) {
++        OPENSSL_armcap_P = ARMV7_NEON | ARMV7_TICK;
++        return;
++    }
++
+ # if defined(__APPLE__) && !defined(__aarch64__)
+     /*
+      * Capability probing by catching SIGILL appears to be problematic
+-- 
+2.7.4
+

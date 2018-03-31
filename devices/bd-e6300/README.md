@@ -10,6 +10,11 @@
 The firmware updates can be extracted with a [patched version](https://github.com/george-hopkins/samygo-patcher) of samygo-patcher.
 
 
+## Kernel
+
+The kernel has been customized and enforces some additional constraints. There are patches for [OpenSSL](../../patches/openssl) and [busybox](../../patches/busybox) available.
+
+
 ## Applications
 
 Most of the system is controlled by a single binary (`exeDSP`).

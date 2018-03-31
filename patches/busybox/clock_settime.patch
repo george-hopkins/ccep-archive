@@ -1,0 +1,63 @@
+From e46219c9262cd0e4819615f4cfc7afc930153a73 Mon Sep 17 00:00:00 2001
+From: George Hopkins <george-hopkins@null.net>
+Date: Sat, 31 Mar 2018 11:04:27 +0200
+Subject: [PATCH] Use clock_settime()
+
+In case the kernel restricts access to settimeofday(), clock_settime()
+can be used instead.
+
+Signed-off-by: George Hopkins <george-hopkins@null.net>
+---
+ networking/ntpd.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/networking/ntpd.c b/networking/ntpd.c
+index 17e5c7d..8eebcf8 100644
+--- a/networking/ntpd.c
++++ b/networking/ntpd.c
+@@ -96,6 +96,7 @@
+ #include <netinet/ip.h> /* For IPTOS_LOWDELAY definition */
+ #include <sys/resource.h> /* setpriority */
+ #include <sys/timex.h>
++#include <sys/syscall.h>
+ #ifndef IPTOS_LOWDELAY
+ # define IPTOS_LOWDELAY 0x10
+ #endif
+@@ -525,6 +526,13 @@ d_to_tv(double d, struct timeval *tv)
+ 	tv->tv_usec = (d - tv->tv_sec) * 1000000;
+ }
+ 
++static void
++d_to_ts(double d, struct timespec *ts)
++{
++	ts->tv_sec = (long)d;
++	ts->tv_nsec = (d - ts->tv_sec) * 1.0e-9;
++}
++
+ static double
+ lfp_to_d(l_fixedpt_t lfp)
+ {
+@@ -1017,14 +1025,18 @@ step_time(double offset)
+ 	llist_t *item;
+ 	double dtime;
+ 	struct timeval tvc, tvn;
++	struct timespec tsn;
+ 	char buf[sizeof("yyyy-mm-dd hh:mm:ss") + /*paranoia:*/ 4];
+ 	time_t tval;
+ 
+ 	gettimeofday(&tvc, NULL); /* never fails */
+ 	dtime = tvc.tv_sec + (1.0e-6 * tvc.tv_usec) + offset;
+ 	d_to_tv(dtime, &tvn);
+-	if (settimeofday(&tvn, NULL) == -1)
+-		bb_perror_msg_and_die("settimeofday");
++	d_to_ts(dtime, &tsn);
++
++	// Skip libc wrapper to avoid linking to librt
++	if (syscall(__NR_clock_settime, CLOCK_REALTIME, &tsn))
++		bb_perror_msg_and_die("clock_settime");
+ 
+ 	VERB2 {
+ 		tval = tvc.tv_sec;
+-- 
+2.7.4
+
